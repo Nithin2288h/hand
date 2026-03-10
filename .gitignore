@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Environment variables (contains secrets!)
+.env
+
+# Firebase service account key (NEVER commit this!)
+config/*firebase*.json
+config/*adminsdk*.json
+
+# Database files
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# Logs
+*.log
+server_error.log
+alert_debug.log
+debug_out.txt
+debug_output.txt
+
+# OS
+.DS_Store
+Thumbs.db
