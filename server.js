@@ -1,4 +1,5 @@
 require('dotenv').config();
+const bcrypt = require('bcryptjs');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -26,9 +27,9 @@ const server = http.createServer(app);
 // Socket.io setup
 const io = new Server(server, {
     cors: {
-        origin: process.env.CLIENT_URL || 'http://localhost:5173',
+        origin: '*',
         methods: ['GET', 'POST'],
-        credentials: true,
+        credentials: false,
     },
 });
 
@@ -149,11 +150,29 @@ app.use((err, req, res, next) => {
     res.status(err.status || 500).json({ success: false, message: err.message || 'Internal server error' });
 });
 
+// ─── Auto-seed on startup ─────────────────────────────────────────────────────
+async function autoSeedIfEmpty() {
+    const db = require('./config/db');
+    const count = db.prepare('SELECT COUNT(*) as n FROM users').get();
+    if (count.n > 0) { console.log('✅ DB already has data, skipping seed'); return; }
+    console.log('🌱 Empty DB detected — seeding default data...');
+    const hash = (pw) => bcrypt.hashSync(pw, 12);
+    const ins = db.prepare(`INSERT INTO users (name,email,password,role,latitude,longitude,phone,is_available) VALUES (?,?,?,?,?,?,?,?)`);
+    ins.run('Admin Authority',   'admin@reliefsync.com', hash('admin123'), 'admin',     13.0827, 80.2707, '+91-9000000001', 1);
+    ins.run('Chennai Relief NGO','ngo@reliefsync.com',   hash('ngo123'),   'ngo',       13.0500, 80.2100, '+91-9000000002', 1);
+    ins.run('Volunteer Ravi',    'bunnynithin2288h@gmail.com', hash('vol123'), 'volunteer', 13.1000, 80.3000, '7406738896', 1);
+    ins.run('Volunteer Priya',   'priya@reliefsync.com', hash('vol123'),   'volunteer', 13.0600, 80.2500, '+91-9000000004', 1);
+    ins.run('Citizen Arjun',     'arjun@reliefsync.com', hash('citizen123'),'citizen',   13.0900, 80.2800, '+91-9000000005', 1);
+    ins.run('Citizen Meena',     'meena@reliefsync.com', hash('citizen123'),'citizen',   13.0700, 80.2600, '+91-9000000006', 1);
+    console.log('✅ Default users seeded');
+}
+
 // ─── Start Server ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-    console.log(`🚀 ReliefSync Pro API running on http://localhost:${PORT}`);
+server.listen(PORT, async () => {
+    console.log(`🚀 ReliefSync Pro API running on port ${PORT}`);
     console.log(`📚 Swagger docs: http://localhost:${PORT}/api/docs`);
+    await autoSeedIfEmpty();
 });
 
 module.exports = { app, server, io };
