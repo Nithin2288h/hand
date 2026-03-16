@@ -5,9 +5,18 @@ const { haversineDistance } = require('../utils/haversine');
 
 // Helper to get Twilio client lazily
 function getTwilioClient() {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    let accountSid = process.env.TWILIO_ACCOUNT_SID;
+    let authToken = process.env.TWILIO_AUTH_TOKEN;
     if (!accountSid || !authToken) return null;
+
+    accountSid = accountSid.trim().replace(/^['"]|['"]$/g, '');
+    authToken = authToken.trim().replace(/^['"]|['"]$/g, '');
+
+    if (!accountSid.startsWith('AC') && !accountSid.startsWith('SK')) {
+        console.warn('[AlertService] Invalid Twilio Account SID format. Mocking WhatsApp.');
+        return null;
+    }
+
     return twilio(accountSid, authToken);
 }
 
