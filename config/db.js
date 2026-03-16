@@ -7,7 +7,11 @@ const dbPath = path.join(__dirname, '..', 'data', 'reliefsync.db');
 // Ensure /data directory exists
 const dataDir = path.dirname(dbPath);
 if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+  try {
+    fs.mkdirSync(dataDir, { recursive: true });
+  } catch (err) {
+    console.error('Failed to create data directory. Using in-memory fallback or expecting persistent disk:', err.message);
+  }
 }
 
 const db = new Database(dbPath);

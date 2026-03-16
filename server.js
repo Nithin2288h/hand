@@ -169,7 +169,7 @@ async function autoSeedIfEmpty() {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, async () => {
+server.listen(PORT, '0.0.0.0', async () => {
     console.log(`🚀 ReliefSync Pro API running on port ${PORT}`);
     console.log(`📚 Swagger docs: http://localhost:${PORT}/api/docs`);
     await autoSeedIfEmpty();
