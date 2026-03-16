@@ -4,7 +4,7 @@ services:
     env: node
     plan: free
     buildCommand: npm install
-    startCommand: node server.js
+    startCommand: node migrate_profile_system.js && node migrate_emergency_system.js && node server.js
     envVars:
       - key: NODE_VERSION
         value: 20.11.0
