@@ -153,6 +153,18 @@ app.use((err, req, res, next) => {
 // ─── Auto-seed on startup ─────────────────────────────────────────────────────
 async function autoSeedIfEmpty() {
     const db = require('./config/db');
+    const fs = require('fs');
+    const path = require('path');
+    
+    // Ensure base tables exist before checking
+    try {
+        const schema = fs.readFileSync(path.join(__dirname, 'models', 'schema.sql'), 'utf-8');
+        db.exec(schema);
+        console.log('✅ Base Database Schema verified/created');
+    } catch (err) {
+        console.error('Failed to create base schema:', err.message);
+    }
+
     const count = db.prepare('SELECT COUNT(*) as n FROM users').get();
     if (count.n > 0) { console.log('✅ DB already has data, skipping seed'); return; }
     console.log('🌱 Empty DB detected — seeding default data...');
