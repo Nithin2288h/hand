@@ -121,49 +121,42 @@ const getWeather = (req, res) => {
         return res.status(400).json({ success: false, message: 'lat and lon are required.' });
     }
 
-    const apiKey = process.env.OPENWEATHER_API_KEY;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,surface_pressure,visibility`;
 
-    // If no API key, return realistic mock data
-    if (!apiKey || apiKey === 'your_openweather_key_here') {
-        return res.json({
-            success: true,
-            mock: true,
-            weather: {
-                temp: 28.5,
-                feels_like: 31.2,
-                condition: 'Partly Cloudy',
-                icon: '02d',
-                humidity: 72,
-                wind_speed: 14.4,
-                visibility: 8,
-                city: 'Your Location',
-                pressure: 1012,
-            },
-        });
-    }
-
-    const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
-    https.get(url, (apiRes) => {
+    https.get(url, { headers: { 'User-Agent': 'ReliefSync/1.0' } }, (apiRes) => {
         let data = '';
         apiRes.on('data', chunk => (data += chunk));
         apiRes.on('end', () => {
             try {
                 const parsed = JSON.parse(data);
-                if (parsed.cod !== 200) {
+                if (!parsed.current) {
                     return res.status(502).json({ success: false, message: 'Weather API error.' });
                 }
+                
+                const current = parsed.current;
+                const wmoCode = current.weather_code;
+                
+                // Map WMO codes to simple conditions
+                let condition = 'Clear';
+                let icon = '01d';
+                if (wmoCode >= 1 && wmoCode <= 3) { condition = 'Cloudy'; icon = '03d'; }
+                else if (wmoCode >= 45 && wmoCode <= 48) { condition = 'Foggy'; icon = '50d'; }
+                else if (wmoCode >= 51 && wmoCode <= 67) { condition = 'Rain'; icon = '10d'; }
+                else if (wmoCode >= 71 && wmoCode <= 82) { condition = 'Snow'; icon = '13d'; }
+                else if (wmoCode >= 95) { condition = 'Thunderstorm'; icon = '11d'; }
+
                 res.json({
                     success: true,
                     weather: {
-                        temp: Math.round(parsed.main.temp),
-                        feels_like: Math.round(parsed.main.feels_like),
-                        condition: parsed.weather[0].main,
-                        icon: parsed.weather[0].icon,
-                        humidity: parsed.main.humidity,
-                        wind_speed: Math.round(parsed.wind.speed * 3.6),
-                        visibility: Math.round((parsed.visibility || 10000) / 1000),
-                        city: parsed.name,
-                        pressure: parsed.main.pressure,
+                        temp: Math.round(current.temperature_2m),
+                        feels_like: Math.round(current.apparent_temperature),
+                        condition: condition,
+                        icon: icon,
+                        humidity: current.relative_humidity_2m,
+                        wind_speed: Math.round(current.wind_speed_10m),
+                        visibility: Math.round((current.visibility || 10000) / 1000),
+                        city: 'Current Location',
+                        pressure: current.surface_pressure,
                     },
                 });
             } catch (e) {

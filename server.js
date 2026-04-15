@@ -84,9 +84,11 @@ io.on('connection', (socket) => {
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
+// Allow all origins so the Flutter mobile app can reach the API from any device/network
 app.use(cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:5173',
-    credentials: true,
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -109,7 +111,10 @@ const swaggerOptions = {
             version: '1.0.0',
             description: 'Geo-Alert Disaster Management System API',
         },
-        servers: [{ url: `http://localhost:${process.env.PORT || 5000}` }],
+        servers: [
+            { url: 'https://reliefsync-backend.onrender.com', description: 'Production (Render)' },
+            { url: `http://localhost:${process.env.PORT || 5000}`, description: 'Local development' },
+        ],
         components: {
             securitySchemes: {
                 bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
@@ -129,12 +134,17 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/resources', resourceRoutes);
 app.use('/api/requests', requestRoutes);
 app.use('/api/volunteers', volunteerRoutes);
-app.use('/api/allocate', allocationRoutes);
+app.use('/api/allocation', allocationRoutes);
 
 // Emergency / Safety Hub routes (weather, SOS, hospitals, safe zones, live location)
 app.use('/api', emergencyRoutes);
 
-// Health check
+// Root health-check — required by Render to confirm the service is alive
+app.get('/', (req, res) => {
+    res.json({ status: 'ReliefSync API running' });
+});
+
+// Extended health-check
 app.get('/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString(), service: 'ReliefSync Pro API' });
 });
